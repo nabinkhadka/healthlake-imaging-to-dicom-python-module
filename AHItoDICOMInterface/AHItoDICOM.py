@@ -35,17 +35,20 @@ class AHItoDICOM:
     DICOMizedFrames = None
     CountToDICOMize = 0
     still_processing = False
+    region_name = None
     aws_access_key = None
     aws_secret_key = None
+    aws_session_token = None
     AHI_endpoint = None
     logger = None
 
-    def __init__(self, aws_access_key : str =  None, aws_secret_key : str = None , AHI_endpoint : str = None , fetcher_process_count : int = None , dicomizer_process_count : int = None ) -> None:
+    def __init__(self, aws_access_key : str =  None, aws_secret_key : str = None , aws_session_token : str = None , AHI_endpoint : str = None , fetcher_process_count : int = None , dicomizer_process_count : int = None ) -> None:
         """
         Helper class constructor.
 
         :param aws_access_key: Optional IAM user access key.
         :param aws_secret_key: Optional IAM user secret key.
+        :param aws_session_token: Optional IAM user session token.
         :param AHI_endpoint: Optional AHI endpoint URL. Only useful to AWS employees.
         :param fetcher_process_count: Optional number of processes to use for fetching frames. Will default to CPU count x 8
         :param dicomizer_process_count: Optional number of processes to use for DICOMizing frames.Will default to CPU count.
@@ -56,6 +59,7 @@ class AHItoDICOM:
         self.DICOMizedFrames = collections.deque()
         self.aws_access_key = aws_access_key
         self.aws_secret_key =  aws_secret_key
+        self.aws_session_token = aws_session_token
         self.AHI_endpoint = AHI_endpoint
         if fetcher_process_count is None:
             self.fetcherProcessCount = int(os.cpu_count()) * 8 
@@ -89,7 +93,7 @@ class AHItoDICOM:
                 }
             ]
         }
-        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.AHI_endpoint )
+        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.aws_session_token , self.AHI_endpoint )
         search_result = client.search_image_sets(datastoreId=datastore_id, searchCriteria = search_criteria) ### in theory we should check if a continuation token is returned and loop until we have all the results...
         instances = []
         for imageset in search_result["imageSetsMetadataSummaries"]:
@@ -115,7 +119,7 @@ class AHItoDICOM:
         self.ImageFrames = collections.deque()
         self.frameToDICOMize = collections.deque()
         self.DICOMizedFrames = collections.deque()
-        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.AHI_endpoint )
+        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.aws_session_token , self.AHI_endpoint )
         self.still_processing = True
         self.FrameDICOMizerPoolManager = Thread(target = self.AssignDICOMizeJob)
         AHI_metadata = self.getMetadata(datastore_id, imageset_id, client) 
@@ -248,7 +252,7 @@ class AHItoDICOM:
         """ 
         try:
             if client is None:
-                client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.AHI_endpoint )
+                client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.aws_session_token , self.AHI_endpoint )
             AHI_study_metadata = client.get_image_set_metadata(datastoreId=datastore_id , imageSetId=imageset_id)
             json_study_metadata = gzip.decompress(AHI_study_metadata["imageSetMetadataBlob"].read())
             json_study_metadata = json.loads(json_study_metadata)  
@@ -277,7 +281,7 @@ class AHItoDICOM:
                 }
             ]
         }
-        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.AHI_endpoint )
+        client = AHIClientFactory(self.aws_access_key ,  self.aws_secret_key , self.aws_session_token , self.AHI_endpoint )
         search_result = client.search_image_sets(datastoreId=datastore_id, searchCriteria = search_criteria) ### in theory we should check if a continuation token is returned and loop until we have all the results...
         series_map = []
         for imageset in search_result["imageSetsMetadataSummaries"]:  
@@ -329,7 +333,7 @@ class AHItoDICOM:
         self.frameDICOMizerThreadList.clear()
         for x in range(self.fetcherProcessCount): 
             self.logger.debug("[DICOMize] - Spawning AHIFrameFetcher thread # "+str(x))
-            self.frameFetcherThreadList.append(AHIFrameFetcher(str(x), self.aws_access_key , self.aws_access_key , self.AHI_endpoint  )) 
+            self.frameFetcherThreadList.append(AHIFrameFetcher(str(x), self.aws_access_key , self.aws_secret_key , self.aws_session_token , self.AHI_endpoint  )) 
         for x in range(self.DICOMizerProcessCount):
             self.logger.debug("[DICOMize] - Spawning AHIDICOMizer thread # "+str(x))
             self.frameDICOMizerThreadList.append(AHIDataDICOMizer(str(x) , AHI_metadata )) 

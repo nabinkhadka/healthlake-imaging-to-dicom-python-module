@@ -28,7 +28,7 @@ class AHIFrameFetcher:
     AHI_endpoint = None
     logger = None
 
-    def __init__(self, InstanceId , aws_access_key , aws_secret_key , AHI_endpoint = None , ahi_client = None, aws_session_token = None):
+    def __init__(self, InstanceId , aws_access_key , aws_secret_key , aws_session_token , AHI_endpoint = None , ahi_client = None):
         self.logger = logging.getLogger(__name__)
         self.InstanceId = InstanceId
         self.FetchJobs = Queue()
@@ -39,16 +39,16 @@ class AHIFrameFetcher:
         self.aws_session_token = aws_session_token
         self.AHI_endpoint = AHI_endpoint
         self.ahi_client = ahi_client
-        self.process = Process(target = self.ProcessJobs , args=(self.FetchJobs,self.FetchJobsCompleted, self.FetchJobsInError ,  self.aws_access_key , self.aws_secret_key , self.AHI_endpoint , self.ahi_client))
+        self.process = Process(target = self.ProcessJobs , args=(self.FetchJobs,self.FetchJobsCompleted, self.FetchJobsInError ,  self.aws_access_key , self.aws_secret_key , self.aws_session_token , self.AHI_endpoint , self.ahi_client))
         self.process.start()
    
     def AddFetchJob(self,FetchJob):
             self.FetchJobs.put(FetchJob)
             self.logger.debug("[{__name__}]["+self.InstanceId+"] - Fetch Job added "+str(FetchJob)+".")
 
-    def ProcessJobs(self,FetchJobs : Queue, FetchJobsCompleted : Queue , FetchJobsInError : Queue ,   aws_access_key : str = None , aws_secret_key : str = None , AHI_endpoint : str = None , ahi_client = None):  
+    def ProcessJobs(self,FetchJobs : Queue, FetchJobsCompleted : Queue , FetchJobsInError : Queue ,   aws_access_key : str = None , aws_secret_key : str = None , aws_session_token : str = None , AHI_endpoint : str = None , ahi_client = None):  
         if ahi_client is None: 
-            ahi_client = AHIClientFactory( aws_access_key= aws_access_key , aws_secret_key=aws_secret_key ,  aws_accendpoint_url=AHI_endpoint )
+            ahi_client = AHIClientFactory( aws_access_key= aws_access_key , aws_secret_key=aws_secret_key , aws_session_token=aws_session_token ,  aws_accendpoint_url=AHI_endpoint )
         while(self.thread_running):
             if not FetchJobs.empty():
                 try:
