@@ -28,14 +28,15 @@ class AHIFrameFetcher:
     AHI_endpoint = None
     logger = None
 
-    def __init__(self, InstanceId , aws_access_key , aws_secret_key , AHI_endpoint = None , ahi_client = None):
+    def __init__(self, InstanceId , aws_access_key , aws_secret_key , AHI_endpoint = None , ahi_client = None, aws_session_token = None):
         self.logger = logging.getLogger(__name__)
         self.InstanceId = InstanceId
         self.FetchJobs = Queue()
         self.FetchJobsCompleted = Queue()
         self.FetchJobsInError = Queue()
-        self.aws_secret_key = aws_access_key
+        self.aws_access_key = aws_access_key
         self.aws_secret_key = aws_secret_key
+        self.aws_session_token = aws_session_token
         self.AHI_endpoint = AHI_endpoint
         self.ahi_client = ahi_client
         self.process = Process(target = self.ProcessJobs , args=(self.FetchJobs,self.FetchJobsCompleted, self.FetchJobsInError ,  self.aws_access_key , self.aws_secret_key , self.AHI_endpoint , self.ahi_client))
