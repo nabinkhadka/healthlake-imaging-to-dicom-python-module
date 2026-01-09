@@ -348,9 +348,9 @@ class AHItoDICOM:
         """ 
         try:
             os.makedirs( destination  , exist_ok=True)
-            filename = os.path.join( destination , ds["SOPInstanceUID"].value)
-            ds.save_as(f"{filename}.dcm", write_like_original=False)
+            filename = os.path.join( destination , f'{ds["SOPInstanceUID"].value}.dcm')
+            ds.save_as(filename, write_like_original=False)
+            return filename
         except Exception as err:
             self.logger.error(f"[{__name__}][saveAsDICOM] - {err}")
-            return False
-        return True
+            return None
